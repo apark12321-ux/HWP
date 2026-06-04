@@ -109,7 +109,7 @@ export default function App() {
           const result = reader.result as string;
           resolve({
             base64Content: result.split(",")[1],
-            mimeType: file.type,
+            mimeType: file.type || "application/pdf",
           });
         };
         reader.readAsDataURL(file);
@@ -123,7 +123,7 @@ export default function App() {
         img.onerror = () => reject(new Error("이미지 해독에 실패했습니다."));
         img.onload = () => {
           const canvas = document.createElement("canvas");
-          const maxDim = 1600; // Optimal resolution for high-quality math OCR
+          const maxDim = 1200; // Efficient resolution for high-quality math OCR and ultra-small payload
           let width = img.width;
           let height = img.height;
 
@@ -150,8 +150,8 @@ export default function App() {
           }
 
           ctx.drawImage(img, 0, 0, width, height);
-          // Compress to JPEG with 0.85 quality to shrink file size by ~90%
-          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          // Compress to JPEG with 0.80 quality to heavily shrink file size (~92% reduction)
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.80);
           resolve({
             base64Content: compressedDataUrl.split(",")[1],
             mimeType: "image/jpeg",
@@ -169,6 +169,32 @@ export default function App() {
     if (!file) return;
 
     setLoadError(null);
+
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+
+    if (!isImage && !isPdf) {
+      setLoadError("AI 변환 실패: 지원하지 않는 파일 형식입니다. 이미지(PNG/JPG) 또는 PDF 파일만 지원합니다.");
+      e.target.value = "";
+      return;
+    }
+
+    // Defensive file size limits to prevent server OOM or proxy gateway timeout errors
+    const maxPdfSize = 8 * 1024 * 1024; // 8MB limit for PDFs
+    const maxImgSize = 15 * 1024 * 1024; // 15MB limit for images
+
+    if (isPdf && file.size > maxPdfSize) {
+      setLoadError("AI 변환 실패: PDF 파일 용량이 너무 큽니다 (최대 8MB). 더 작게 분할하거나, 선명하게 캡처한 이미지(PNG/JPG) 파일로 변환하여 올려주세요.");
+      e.target.value = "";
+      return;
+    }
+
+    if (isImage && file.size > maxImgSize) {
+      setLoadError("AI 변환 실패: 이미지 파일 용량이 너무 큽니다 (최대 15MB). 해상도를 조절하거나 용량을 더 가볍게 압축하여 제출해주세요.");
+      e.target.value = "";
+      return;
+    }
+
     setAiLoading(true);
     setAiStatusMessage("Gemini AI 수식 인지 분석기 작동 중 (30초 가량 소요)...");
 
@@ -187,7 +213,16 @@ export default function App() {
         })
       });
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch (jsonErr) {
+        console.error("Failed to parse JSON response:", jsonErr);
+        throw new Error(
+          "서버 연결 혹은 AI 응답 수신에 실패했습니다. (클라우드 환경의 일시적 요청 한계 초과 상태일 수 있습니다. 이미지의 크기를 더 줄여서 다시 한 번만 시도해 주세요.)"
+        );
+      }
+
       if (!response.ok || !data.success) {
         throw new Error(data.error || "AI OCR processing failed.");
       }
