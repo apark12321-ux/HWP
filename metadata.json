@@ -1,0 +1,6 @@
+{
+  "name": "HWPX Equation Math Board",
+  "description": "수학 문제집 이미지/PDF를 AI로 분석하여 수식을 추출하고, 격식 한글 HWPX 수식 문서로 내보낼 수 있는 수식 문서 제작 편집 보드입니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
