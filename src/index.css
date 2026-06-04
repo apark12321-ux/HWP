@@ -1,1 +1,53 @@
 @import "tailwindcss";
+
+@layer utilities {
+  /* Print utilities and avoid-break handling for high-fidelity papers */
+  @media print {
+    body {
+      background-color: #ffffff !important;
+      color: #000000 !important;
+      font-family: "Inter", sans-serif !important;
+    }
+
+    /* Target direct app elements to hide during document render context */
+    #root > div:not(#print-section),
+    header,
+    main,
+    footer,
+    .no-print {
+      display: none !important;
+      height: 0 !important;
+      overflow: hidden !important;
+      visibility: hidden !important;
+    }
+
+    #print-section {
+      display: block !important;
+      visibility: visible !important;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background-color: #ffffff !important;
+    }
+
+    /* Enable high-fidelity background prints inside PDF files */
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 15mm 15mm 15mm 15mm;
+    }
+
+    .print-avoid-break {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+  }
+}
+

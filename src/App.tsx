@@ -70,6 +70,12 @@ export default function App() {
   const [aiStatusMessage, setAiStatusMessage] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [testPaperTitle, setTestPaperTitle] = useState("수식연구회 수학 단원체크 문제집");
+  const [testPaperSub, setTestPaperSub] = useState("수학 영역");
+  const [testPaperPeriod, setTestPaperPeriod] = useState("제 1 교시");
+  const [printColumns, setPrintColumns] = useState<"1col" | "2col">("2col");
+  const [showStudentInfo, setShowStudentInfo] = useState(true);
   const [activeTab, setActiveTab] = useState<"problems" | "cropper">("problems");
 
   // Load HWPX file directly in browser
@@ -490,14 +496,24 @@ export default function App() {
               </label>
             </div>
 
+            {/* New high-comfort PDF layout printer */}
+            <button
+              onClick={() => setShowPrintModal(true)}
+              disabled={problems.length === 0}
+              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-extrabold px-4.5 py-2.5 rounded-lg shadow-md shadow-emerald-100 transition-all border border-emerald-700 cursor-pointer active:scale-95 animate-pulse hover:animate-none"
+            >
+              <Download className="w-3.5 h-3.5" />
+              오류 없는 PDF 시험지 내보내기
+            </button>
+
             {/* Big floating trigger */}
             <button
               onClick={handleExportHwpx}
               disabled={problems.length === 0}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md shadow-indigo-100 transition-all border border-indigo-700"
+              className="flex items-center gap-1 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-250 transition-colors cursor-pointer"
             >
-              <FileDown className="w-3.5 h-3.5" />
-              한글 HWPX 내보내기
+              <FileDown className="w-3.5 h-3.5 text-slate-500" />
+              HWPX로 백업하기
             </button>
           </div>
         </div>
@@ -1018,6 +1034,345 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* PDF Print Preview Screen Modal */}
+      <AnimatePresence>
+        {showPrintModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto no-print"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-white border border-slate-200 rounded-3xl max-w-5xl w-full p-6 shadow-2xl relative flex flex-col md:flex-row gap-6"
+            >
+              <button
+                onClick={() => setShowPrintModal(false)}
+                className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 rounded-full bg-slate-100 hover:bg-slate-200 p-2 cursor-pointer transition-colors z-10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Control panel of print settings */}
+              <div className="w-full md:w-2/5 flex flex-col justify-between gap-4 max-h-[85vh] overflow-y-auto pr-2 no-scrollbar">
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full border border-emerald-100 uppercase tracking-widest leading-none">
+                      Vector PDF Publisher
+                    </span>
+                    <h3 className="text-md font-extrabold text-slate-900 mt-2 flex items-center gap-1.5 leading-none">
+                      <Settings className="w-4.5 h-4.5 text-emerald-600" />
+                      PDF 인쇄 및 레이아웃 설정
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium mt-1 leading-normal">
+                      오류 없이 고해상도 수식 백터 PDF 시험지로 포맷팅을 맞춤 설정합니다.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 pt-1">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">시험지 대제목 (주제명)</label>
+                      <input
+                        type="text"
+                        value={testPaperTitle}
+                        onChange={(e) => setTestPaperTitle(e.target.value)}
+                        placeholder="예: 중등 수학 도형 단원 종합 체크"
+                        className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-slate-50 focus:bg-white text-slate-800 transition-all"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">영역명</label>
+                        <input
+                          type="text"
+                          value={testPaperSub}
+                          onChange={(e) => setTestPaperSub(e.target.value)}
+                          className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-slate-50 focus:bg-white text-slate-800 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">교시명</label>
+                        <input
+                          type="text"
+                          value={testPaperPeriod}
+                          onChange={(e) => setTestPaperPeriod(e.target.value)}
+                          className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-slate-50 focus:bg-white text-slate-800 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Choose column splitting */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">인쇄 레이아웃 단수</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setPrintColumns("1col")}
+                          className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                            printColumns === "1col"
+                              ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                              : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
+                          }`}
+                        >
+                          A4 1단 수직 나열
+                        </button>
+                        <button
+                          onClick={() => setPrintColumns("2col")}
+                          className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                            printColumns === "2col"
+                              ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                              : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
+                          }`}
+                        >
+                          A4 2단 모의고사 분할
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Toggle metadata bar */}
+                    <button
+                      onClick={() => setShowStudentInfo(!showStudentInfo)}
+                      className={`flex items-center justify-between p-2.5 border rounded-lg w-full text-left transition-all ${
+                        showStudentInfo
+                          ? "border-emerald-100 bg-emerald-50/20 text-emerald-900"
+                          : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      <div className="pr-2">
+                        <div className="text-xs font-bold">인적 사항 기입란 표시</div>
+                        <div className="text-[9px] opacity-75 mt-0.5">상단에 학교/학년/반/성명란을 배치합니다.</div>
+                      </div>
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center border font-bold ${showStudentInfo ? "bg-emerald-600 border-emerald-600 text-white" : "border-slate-300 text-transparent"}`}>✓</div>
+                    </button>
+
+                    <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-200/50 text-[10.5px] text-amber-800 space-y-1.5 font-medium leading-relaxed">
+                      <p className="font-bold text-amber-900 flex items-center gap-1">
+                        📢 오류 없는 무결점 PDF 보관법
+                      </p>
+                      <p>
+                        "인쇄 다이얼로그 열기" 클릭 시 대상을 <b>[PDF로 저장]</b>으로 교체하시면, 깨지거나 유실되는 수식과 이미지 없이 완전 고품질 벡터로 영구 저장됩니다!
+                      </p>
+                      <p className="opacity-90">
+                        * 시험지 여백은 인쇄 창 설정에서 [기본] 또는 [없음] 상태로 한층 더 미세 정교하게 균형을 맞추실 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 border-t pt-4 mt-2">
+                  <button
+                    onClick={() => setShowPrintModal(false)}
+                    className="flex-1 py-3 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all cursor-pointer"
+                  >
+                    이전으로
+                  </button>
+                  <button
+                    onClick={() => {
+                      setTimeout(() => {
+                        window.print();
+                      }, 120);
+                    }}
+                    className="flex-2 py-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow-lg shadow-emerald-100/50 transition-all cursor-pointer flex items-center justify-center gap-1"
+                  >
+                    <Download className="w-4 h-4" />
+                    PDF 인쇄 다이얼로그 열기
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Side: Virtual interactive simulator of test paper */}
+              <div className="w-full md:w-3/5 bg-slate-100 border border-slate-200 rounded-2xl p-4 flex flex-col items-center justify-center min-h-[460px] max-h-[85vh] overflow-y-auto select-none no-scrollbar">
+                <div className="text-[10px] font-bold text-slate-400 self-start mb-2 uppercase tracking-tight">가상 A4 실시간 인쇄용 레이아웃 시뮬레이터 (A4 Aspect Ratio)</div>
+                <div className="w-full max-w-[420px] aspect-[1/1.414] bg-white border border-slate-300 shadow-xl rounded-md p-5 text-slate-900 flex flex-col overflow-y-auto text-[10px] scale-95 origin-top relative no-scrollbar select-none">
+                  
+                  {/* Grid header sheet */}
+                  <div className="border-b border-slate-800 pb-2 mb-4">
+                    <div className="flex justify-between items-end text-[7px] font-black text-slate-400">
+                      <span>{testPaperPeriod}</span>
+                      <span className="text-[10px] tracking-widest text-slate-800 font-black">{testPaperSub}</span>
+                      <span>f-Equation Studio</span>
+                    </div>
+                    <div className="text-center my-2 font-black text-xs leading-snug text-slate-800">
+                      {testPaperTitle || "무제목 평가지"}
+                    </div>
+                    {showStudentInfo && (
+                      <div className="flex justify-end gap-3 text-[7px] text-slate-400 mt-2 border-t pt-1 border-slate-100 font-mono">
+                        <span>학년: ____</span>
+                        <span>반: ____</span>
+                        <span>이름: __________</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* problems inner tree list */}
+                  {printColumns === "2col" ? (
+                    <div className="grid grid-cols-2 gap-4 relative flex-1 text-[8px] content-start">
+                      <div className="absolute left-1/2 top-0 bottom-0 border-l border-dashed border-slate-200 -translate-x-1/2" />
+                      {problems.map((p, pidx) => (
+                        <div key={p.id} className="pr-1 leading-normal pb-1">
+                          <div className="font-black flex gap-1 items-start text-emerald-600 text-[8px] mb-0.5">
+                            <span>{pidx + 1}.</span>
+                            <span className="text-slate-400 font-medium">({bracketNumber ? `[${p.number}]` : p.number})</span>
+                          </div>
+                          <div className="pl-2 space-y-1 text-slate-600 text-[7px]">
+                            {p.lines.map((ln, lnidx) => {
+                              const cleanText = ln.replace(/@IMG:[^@]+@/g, "[그림 데이터]");
+                              return <div key={lnidx} className="truncate">{cleanText}</div>;
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-3 flex-1 text-[9px] content-start">
+                      {problems.map((p, pidx) => (
+                        <div key={p.id} className="pb-1 leading-normal">
+                          <div className="font-bold flex gap-1 items-start text-emerald-600 text-[9px] mb-0.5">
+                            <span>문제 {pidx + 1}.</span>
+                            <span className="text-slate-400 font-medium">({bracketNumber ? `[${p.number}]` : p.number})</span>
+                          </div>
+                          <div className="pl-3 space-y-1 text-slate-600 text-[8px]">
+                            {p.lines.map((ln, lnidx) => {
+                              const cleanText = ln.replace(/@IMG:[^@]+@/g, "[그림 데이터]");
+                              return <div key={lnidx} className="truncate">{cleanText}</div>;
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="text-[6px] text-slate-400 text-center mt-auto pt-2 border-t tracking-wider">
+                    * Interactive Custom A4 Layout Engine
+                  </div>
+                </div>
+              </div>
+
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Actual printed vector container - hidden inside workspace, shown only for system dialog */}
+      <div id="print-section" className="hidden print:block text-black bg-white p-4 font-sans text-xs">
+        <div className="border-b-[3px] border-double border-black pb-4 mb-6">
+          <div className="flex justify-between items-end text-xs font-bold font-mono">
+            <span>{testPaperPeriod}</span>
+            <span className="text-xl tracking-[0.25em] font-black">{testPaperSub}</span>
+            <span>f-Equation Studio</span>
+          </div>
+          <div className="text-center my-4">
+            <h1 className="text-2xl font-black tracking-wide leading-tight">{testPaperTitle}</h1>
+          </div>
+          {showStudentInfo && (
+            <div className="flex justify-end gap-6 text-xs font-mono border-t pt-2 border-slate-300 mt-2">
+              <span>학교: _________________</span>
+              <span>학년: _____ 반: _____ 번: _____</span>
+              <span>성명: __________________</span>
+            </div>
+          )}
+        </div>
+
+        {printColumns === "2col" ? (
+          <div className="grid grid-cols-2 gap-x-12 gap-y-8 relative">
+            {/* Split boundary line */}
+            <div className="absolute left-1/2 top-0 bottom-0 border-l border-dashed border-slate-300 -translate-x-1/2" />
+            {problems.map((prob, idx) => (
+              <div key={prob.id} className="print-avoid-break break-inside-avoid relative pb-2 leading-relaxed">
+                <div className="flex items-start gap-1 font-bold mb-1.5">
+                  <span className="text-xs font-black shrink-0">{idx + 1}.</span>
+                  <span className="text-[10px] text-slate-400 font-normal shrink-0">({bracketNumber ? `[${prob.number}]` : prob.number})</span>
+                </div>
+                <div className="space-y-2 text-xs pl-4 pr-1">
+                  {prob.lines.map((line, lIdx) => {
+                    if (answersVertical && [...CHOICE_MARKS].filter((c) => line.includes(c)).length >= 2) {
+                      const choicesList = [];
+                      let currStr = "";
+                      for (const symbol of line) {
+                        if (CHOICE_MARKS.includes(symbol)) {
+                          if (currStr.trim()) choicesList.push(currStr.trim());
+                          currStr = symbol;
+                        } else {
+                          currStr += symbol;
+                        }
+                      }
+                      if (currStr.trim()) choicesList.push(currStr.trim());
+
+                      return (
+                        <div key={lIdx} className="space-y-1 pt-1.5">
+                          {choicesList.map((ch, chI) => (
+                            <LatexPreview key={chI} text={ch} className="text-xs text-slate-900" images={croppedImages} />
+                          ))}
+                        </div>
+                      );
+                    }
+                    return (
+                      <LatexPreview
+                        key={lIdx}
+                        text={line || " "}
+                        className="text-xs text-slate-900 leading-relaxed font-normal"
+                        images={croppedImages}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-10">
+            {problems.map((prob, idx) => (
+              <div key={prob.id} className="print-avoid-break break-inside-avoid border-b border-slate-150 pb-6 last:border-b-0 leading-relaxed">
+                <div className="flex items-start gap-1 font-bold mb-2">
+                  <span className="text-sm font-extrabold text-slate-900 shrink-0">문제 {idx + 1}.</span>
+                  <span className="text-[10px] text-slate-400 font-normal shrink-0">({bracketNumber ? `[${prob.number}]` : prob.number})</span>
+                </div>
+                <div className="space-y-3 pl-6">
+                  {prob.lines.map((line, lIdx) => {
+                    if (answersVertical && [...CHOICE_MARKS].filter((c) => line.includes(c)).length >= 2) {
+                      const choicesList = [];
+                      let currStr = "";
+                      for (const symbol of line) {
+                        if (CHOICE_MARKS.includes(symbol)) {
+                          if (currStr.trim()) choicesList.push(currStr.trim());
+                          currStr = symbol;
+                        } else {
+                          currStr += symbol;
+                        }
+                      }
+                      if (currStr.trim()) choicesList.push(currStr.trim());
+
+                      return (
+                        <div key={lIdx} className="space-y-1 pt-1">
+                          {choicesList.map((ch, chI) => (
+                            <LatexPreview key={chI} text={ch} className="text-xs text-slate-900" images={croppedImages} />
+                          ))}
+                        </div>
+                      );
+                    }
+                    return (
+                      <LatexPreview
+                        key={lIdx}
+                        text={line || " "}
+                        className="text-xs text-slate-900 leading-relaxed font-normal"
+                        images={croppedImages}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="text-center text-[10px] text-slate-405 mt-24 pt-4 border-t border-slate-200 font-mono">
+          * f-Equation Studio AI OCR 수식 출판 시스템 (Vector PDF representation)
+        </div>
+      </div>
 
       {/* Humble Footer */}
       <footer className="mt-12 bg-white border-t border-slate-200/50 py-6 text-center text-slate-400">
