@@ -98,6 +98,71 @@ export default function App() {
     }
   };
 
+  // Compress math sheets/photos client-side to fit below proxy limits and speed up OCR transit
+  const compressImage = (file: File): Promise<{ base64Content: string; mimeType: string }> => {
+    return new Promise((resolve, reject) => {
+      if (!file.type.startsWith("image/")) {
+        // If it's a PDF, read it natively without canvas downscaling
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("파일 읽기에 실패했습니다."));
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve({
+            base64Content: result.split(",")[1],
+            mimeType: file.type,
+          });
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("이미지 파일 로드에 실패했습니다."));
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("이미지 해독에 실패했습니다."));
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const maxDim = 1600; // Optimal resolution for high-quality math OCR
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            resolve({
+              base64Content: (event.target?.result as string).split(",")[1],
+              mimeType: file.type,
+            });
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          // Compress to JPEG with 0.85 quality to shrink file size by ~90%
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          resolve({
+            base64Content: compressedDataUrl.split(",")[1],
+            mimeType: "image/jpeg",
+          });
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Convert HWP/PDF/images using AI OCR via Express Server endpoint
   const handleAiOcrUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -108,16 +173,8 @@ export default function App() {
     setAiStatusMessage("Gemini AI 수식 인지 분석기 작동 중 (30초 가량 소요)...");
 
     try {
-      // 1. Convert file to base64
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result.split(",")[1]); // extract actual raw payload
-        };
-      });
-      reader.readAsDataURL(file);
-      const base64Content = await base64Promise;
+      // 1. Process and compress file to fit safely within transfer payload limits
+      const { base64Content, mimeType } = await compressImage(file);
 
       // 2. Submit to backend API route
       const response = await fetch("/api/ocr", {
@@ -125,7 +182,7 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fileBase64: base64Content,
-          mimeType: file.type || "image/png",
+          mimeType: mimeType,
           filename: file.name
         })
       });
